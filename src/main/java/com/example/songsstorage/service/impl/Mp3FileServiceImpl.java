@@ -1,11 +1,14 @@
 package com.example.songsstorage.service.impl;
 
+import com.example.songsstorage.entity.FileEntity;
+import com.example.songsstorage.repository.FileRepository;
 import com.example.songsstorage.service.Mp3FileService;
 import com.google.api.gax.paging.Page;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
+import model.Mp3FileResource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
@@ -14,51 +17,96 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class Mp3FileServiceImpl implements Mp3FileService {
     @Autowired
     Storage storage;
 
+    @Autowired
+    FileRepository fileRepository;
+
     @Value("${gcp.bucket.name}")
     private String bucketName;
-
 
     @Override
     public List<String> listOfFiles() {
 
         List<String> list = new ArrayList<>();
+        List<FileEntity> all = fileRepository.findAll();
         Page<Blob> blobs = storage.list(bucketName);
+
         for (Blob blob : blobs.iterateAll()) {
             list.add(blob.getName());
         }
-        return list;
+        return all.stream()
+                .filter(fileEntity -> list.contains(fileEntity.getName()))
+                .map(fileEntity -> fileEntity.getId().toString())
+                .collect(Collectors.toList());
     }
 
     @Override
-    public ByteArrayResource downloadFile(String fileName) {
+    public Mp3FileResource downloadFile(Long fileId) {
+        Optional<FileEntity> fileEntityOptional = fileRepository.findById(fileId);
+        String fileName = fileEntityOptional.map(FileEntity::getName).orElse(null);
+        Mp3FileResource mp3FileResource = new Mp3FileResource();
 
-        Blob blob = storage.get(bucketName, fileName);
-        ByteArrayResource resource = new ByteArrayResource(
-                blob.getContent());
+        if (fileName != null) {
+            Blob blob = storage.get(bucketName, fileName);
 
-        return resource;
+            mp3FileResource.setFilename(fileName);
+            mp3FileResource.setFile(new ByteArrayResource(blob.getContent()));
+            return mp3FileResource;
+        }
+        return null;
     }
 
     @Override
-    public boolean deleteFile(String fileName) {
-
-        Blob blob = storage.get(bucketName, fileName);
-
-        return blob.delete();
+    public void deleteFile(Long fileId) {
+        fileRepository.findById(fileId)
+                .ifPresent(entity -> {
+                    storage.get(bucketName, entity.getName()).delete();
+                    fileRepository.delete(entity);
+                });
     }
 
     @Override
-    public void uploadFile(MultipartFile file) throws IOException {
+    public FileEntity uploadFile(MultipartFile file) throws IOException {
+
+        simpleValidation(file);
+
         BlobId blobId = BlobId.of(bucketName, file.getOriginalFilename());
-        BlobInfo blobInfo = BlobInfo.newBuilder(blobId).
-                setContentType(file.getContentType()).build();
-        Blob blob = storage.create(blobInfo,file.getBytes());
+        BlobInfo blobInfo = BlobInfo.newBuilder(blobId).setContentType(file.getContentType()).build();
+        FileEntity entity = createFileEntity(storage.create(blobInfo,file.getBytes()));
+
+        return fileRepository.save(entity);
+    }
+
+    private static void simpleValidation(MultipartFile file) throws IOException {
+        if (file.isEmpty()) {
+            throw new IOException("file is empty");
+        }
+
+        String[] fileNameArray = file.getOriginalFilename().split("\\.");
+
+        if (fileNameArray.length < 2 ) {
+            throw new RuntimeException("file name is incorrect");
+        }
+
+        if (!Arrays.asList(fileNameArray).contains("mp3")) {
+            throw new RuntimeException("validation is filed");
+        }
+    }
+
+    private FileEntity createFileEntity(Blob blob) {
+        FileEntity fileEntity =  new FileEntity();
+        fileEntity.setName(blob.getName());
+        fileEntity.setGeneratedId(blob.getGeneratedId());
+
+        return fileEntity;
     }
 }
