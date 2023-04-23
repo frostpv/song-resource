@@ -1,5 +1,6 @@
 package com.example.songsstorage.service;
 
+import com.example.songsstorage.entity.FileEntity;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -10,9 +11,9 @@ public interface Mp3FileService {
 
     List<String> listOfFiles();
 
-    ByteArrayResource downloadFile(String fileName);
+    ByteArrayResource downloadFile(Long fileId);
 
-    boolean deleteFile(String fileName);
+    void deleteFile(Long fileId);
 
-    void uploadFile(MultipartFile file) throws IOException;
+    FileEntity uploadFile(MultipartFile file) throws IOException;
 }
