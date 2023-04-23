@@ -2,6 +2,7 @@ package com.example.songsstorage.controller;
 
 import com.example.songsstorage.entity.FileEntity;
 import com.example.songsstorage.service.impl.Mp3FileServiceImpl;
+import model.Mp3FileResource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
@@ -65,17 +66,17 @@ public class SongsController {
     @GetMapping("/{fileId}")
     public ResponseEntity<Resource> downloadFile(@PathVariable String fileId)  {
         Long aLong = Long.valueOf(fileId);
-        ByteArrayResource resource = fileService.downloadFile(aLong);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + aLong + "\"");
+        Mp3FileResource resource = fileService.downloadFile(aLong);
 
         if (resource == null) {
             return ResponseEntity.badRequest().build();
         }
 
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"");
+
         return ResponseEntity.ok().
                 contentType(MediaType.APPLICATION_OCTET_STREAM).
-                headers(headers).body(resource);
+                headers(headers).body(resource.getFile());
     }
 }

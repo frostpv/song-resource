@@ -8,6 +8,7 @@ import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
+import model.Mp3FileResource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
@@ -49,13 +50,17 @@ public class Mp3FileServiceImpl implements Mp3FileService {
     }
 
     @Override
-    public ByteArrayResource downloadFile(Long fileId) {
+    public Mp3FileResource downloadFile(Long fileId) {
         Optional<FileEntity> fileEntityOptional = fileRepository.findById(fileId);
         String fileName = fileEntityOptional.map(FileEntity::getName).orElse(null);
+        Mp3FileResource mp3FileResource = new Mp3FileResource();
 
         if (fileName != null) {
             Blob blob = storage.get(bucketName, fileName);
-            return new ByteArrayResource(blob.getContent());
+
+            mp3FileResource.setFilename(fileName);
+            mp3FileResource.setFile(new ByteArrayResource(blob.getContent()));
+            return mp3FileResource;
         }
         return null;
     }
