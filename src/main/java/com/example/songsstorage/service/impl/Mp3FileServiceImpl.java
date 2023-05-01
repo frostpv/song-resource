@@ -3,12 +3,14 @@ package com.example.songsstorage.service.impl;
 import com.example.songsstorage.entity.FileEntity;
 import com.example.songsstorage.repository.FileRepository;
 import com.example.songsstorage.service.Mp3FileService;
+import com.example.songsstorage.service.RabbitService;
 import com.google.api.gax.paging.Page;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
 import model.Mp3FileResource;
+import model.RabbitMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
@@ -16,10 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,6 +28,9 @@ public class Mp3FileServiceImpl implements Mp3FileService {
 
     @Autowired
     FileRepository fileRepository;
+
+    @Autowired
+    RabbitService rabbitService;
 
     @Value("${gcp.bucket.name}")
     private String bucketName;
@@ -83,7 +85,11 @@ public class Mp3FileServiceImpl implements Mp3FileService {
         BlobInfo blobInfo = BlobInfo.newBuilder(blobId).setContentType(file.getContentType()).build();
         FileEntity entity = createFileEntity(storage.create(blobInfo,file.getBytes()));
 
-        return fileRepository.save(entity);
+        FileEntity fileEntity = fileRepository.save(entity);
+
+        rabbitService.sendToQueue(new RabbitMessage(fileEntity.getId(), fileEntity.getName(), new Date()));
+
+        return fileEntity;
     }
 
     private static void simpleValidation(MultipartFile file) throws IOException {
