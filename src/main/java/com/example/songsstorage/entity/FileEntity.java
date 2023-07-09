@@ -1,5 +1,6 @@
 package com.example.songsstorage.entity;
 
+import com.example.songsstorage.util.StorageType;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -17,4 +18,5 @@ public class FileEntity {
     private Long id;
     private String name;
     private String generatedId;
+    // lets think about this private StorageType storageType;
 }

@@ -4,7 +4,6 @@ import com.example.songsstorage.entity.FileEntity;
 import com.example.songsstorage.service.impl.Mp3FileServiceImpl;
 import model.Mp3FileResource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
