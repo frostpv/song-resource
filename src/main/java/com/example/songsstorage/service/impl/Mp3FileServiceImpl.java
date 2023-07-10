@@ -4,6 +4,7 @@ import com.example.songsstorage.entity.FileEntity;
 import com.example.songsstorage.repository.FileRepository;
 import com.example.songsstorage.service.Mp3FileService;
 import com.example.songsstorage.service.RabbitService;
+import com.example.songsstorage.service.StrService;
 import com.google.api.gax.paging.Page;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
@@ -12,13 +13,16 @@ import com.google.cloud.storage.Storage;
 import model.Mp3FileResource;
 import model.RabbitMessage;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,15 +36,15 @@ public class Mp3FileServiceImpl implements Mp3FileService {
     @Autowired
     RabbitService rabbitService;
 
-    @Value("${gcp.bucket.name}")
-    private String bucketName;
+    @Autowired
+    StrService strService;
 
     @Override
     public List<String> listOfFiles() {
 
         List<String> list = new ArrayList<>();
         List<FileEntity> all = fileRepository.findAll();
-        Page<Blob> blobs = storage.list(bucketName);
+        Page<Blob> blobs = storage.list(strService.getDefaultStorage());
 
         for (Blob blob : blobs.iterateAll()) {
             list.add(blob.getName());
@@ -58,7 +62,7 @@ public class Mp3FileServiceImpl implements Mp3FileService {
         Mp3FileResource mp3FileResource = new Mp3FileResource();
 
         if (fileName != null) {
-            Blob blob = storage.get(bucketName, fileName);
+            Blob blob = storage.get(strService.getDefaultStorage(), fileName);
 
             mp3FileResource.setFilename(fileName);
             mp3FileResource.setFile(new ByteArrayResource(blob.getContent()));
@@ -71,7 +75,7 @@ public class Mp3FileServiceImpl implements Mp3FileService {
     public void deleteFile(Long fileId) {
         fileRepository.findById(fileId)
                 .ifPresent(entity -> {
-                    storage.get(bucketName, entity.getName()).delete();
+                    storage.get(strService.getDefaultStorage(), entity.getName()).delete();
                     fileRepository.delete(entity);
                 });
     }
@@ -81,7 +85,7 @@ public class Mp3FileServiceImpl implements Mp3FileService {
 
         simpleValidation(file);
 
-        BlobId blobId = BlobId.of(bucketName, file.getOriginalFilename());
+        BlobId blobId = BlobId.of(strService.getDefaultStorage(), file.getOriginalFilename());
         BlobInfo blobInfo = BlobInfo.newBuilder(blobId).setContentType(file.getContentType()).build();
         FileEntity entity = createFileEntity(storage.create(blobInfo,file.getBytes()));
 
