@@ -26,8 +26,15 @@ resilience4j:
         slidingWindowType: COUNT_BASED
 
 
-  retry:
+retry:
     instances:
       userService:
         maxRetryAttempts: 5
         waitDuration: 10s
+
+keycloak:
+  realm:song
+  auth-server-url: http://35.209.134.187:8080/auth/
+  resource: spring-services
+  public-client: true
+  bearer-only: true

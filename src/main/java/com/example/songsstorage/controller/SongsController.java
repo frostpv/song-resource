@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.annotation.security.RolesAllowed;
 import java.io.IOException;
 import java.util.List;
 
@@ -25,6 +26,7 @@ public class SongsController {
      * @return list of files
      */
     @GetMapping
+    @RolesAllowed("user")
     public ResponseEntity<List<String>> listOfFiles() {
         List<String> files = fileService.listOfFiles();
         return ResponseEntity.ok(files);
@@ -53,6 +55,7 @@ public class SongsController {
      * @return
      */
     @DeleteMapping
+    @RolesAllowed("admin")
     public ResponseEntity<String> deleteFile(@RequestParam List<String> ids) {
         ids.forEach(id -> fileService.deleteFile(Long.valueOf(id)));
         return ResponseEntity.ok(" Files deleted successfully");
@@ -63,6 +66,7 @@ public class SongsController {
      * @return
      */
     @GetMapping("/{fileId}")
+    @RolesAllowed("user")
     public ResponseEntity<Resource> downloadFile(@PathVariable String fileId)  {
         Long aLong = Long.valueOf(fileId);
         Mp3FileResource resource = fileService.downloadFile(aLong);
